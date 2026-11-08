@@ -93,48 +93,46 @@
     // Menerima perintah navigasi dari Apps Script
     window.addEventListener('message', function(event) {
 
-      // Pastikan pesan berasal dari iframe aplikasi
-      if (event.source !== frame.contentWindow) return;
-
-      // Validasi origin Google Apps Script
+      // Validasi domain pengirim
       let hostname = '';
-
+    
       try {
         hostname = new URL(event.origin).hostname;
       } catch (error) {
         return;
       }
-
+    
       if (
         hostname !== 'googleusercontent.com' &&
         !hostname.endsWith('.googleusercontent.com')
       ) {
         return;
       }
-
+    
       const data = event.data;
-
+    
       if (!data || data.type !== 'navigate') return;
-
+    
       if (!ALLOWED_PAGES.includes(data.page)) return;
-
+    
       const params = new URLSearchParams();
-
+    
       params.set('page', data.page);
-
+    
       if (data.page === 'product' && data.slug) {
         params.set('slug', String(data.slug).slice(0, 120));
       }
-
-      // Memperbarui URL GitHub
+    
+      // Perbarui URL GitHub
       history.pushState(
         null,
         '',
         location.pathname + '?' + params.toString()
       );
-
-      // Memuat ulang iframe dengan route baru
+    
+      // Muat halaman baru di iframe
       loadPage(params);
+    
     });
   </script>
 
