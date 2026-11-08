@@ -7,33 +7,209 @@
   <title>Planrapiku Portal</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     html,
     body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
+      overflow: hidden;
       background: #F2EFE9;
+      font-family: Arial, sans-serif;
     }
 
-    iframe {
+    /* IFRAME */
+    #portalFrame {
       display: block;
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       border: 0;
+      background: #F2EFE9;
+    }
+
+    /* LOADING SCREEN */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #2E2B28;
+      opacity: 1;
+      visibility: visible;
+      transition:
+        opacity .45s ease,
+        visibility .45s ease;
+    }
+
+    #loadingScreen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-content {
+      width: min(340px, 85%);
+      text-align: center;
+      color: #F2EFE9;
+      animation: contentAppear .7s ease both;
+    }
+
+    /* BRAND LOGO */
+    .loading-logo {
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 22px;
+      border: 1px solid #D4A853;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #D4A853;
+      font-size: 31px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      animation: logoPulse 2s ease-in-out infinite;
+    }
+
+    .loading-brand {
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: -.7px;
+      margin-bottom: 7px;
+    }
+
+    .loading-subtitle {
+      color: #A9A39A;
+      font-size: 10px;
+      letter-spacing: 3px;
+      font-weight: 600;
+    }
+
+    /* LOADING LINE */
+    .loading-progress {
+      width: 190px;
+      height: 3px;
+      margin: 35px auto 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #514B42;
+    }
+
+    .loading-progress-bar {
+      width: 40%;
+      height: 100%;
+      border-radius: 10px;
+      background: #D4A853;
+      animation: loadingMove 1.35s ease-in-out infinite;
+    }
+
+    .loading-message {
+      color: #D4A853;
+      font-size: 12px;
+      letter-spacing: .2px;
+      min-height: 18px;
+    }
+
+    .loading-caption {
+      color: #817D76;
+      font-size: 10px;
+      margin-top: 48px;
+      letter-spacing: .3px;
+    }
+
+    /* ANIMATIONS */
+    @keyframes loadingMove {
+      0% {
+        transform: translateX(-110%);
+      }
+      100% {
+        transform: translateX(360%);
+      }
+    }
+
+    @keyframes logoPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(212,168,83,0);
+      }
+      50% {
+        box-shadow: 0 0 22px 2px rgba(212,168,83,.13);
+      }
+    }
+
+    @keyframes contentAppear {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
     }
   </style>
 </head>
 
 <body>
 
+  <!-- PORTAL IFRAME -->
   <iframe
     id="portalFrame"
     title="Planrapiku Portal"
     allow="clipboard-read; clipboard-write">
   </iframe>
 
+
+  <!-- LOADING SCREEN -->
+  <div id="loadingScreen">
+
+    <div class="loading-content">
+
+      <div class="loading-logo">P</div>
+
+      <div class="loading-brand">
+        Planrapiku
+      </div>
+
+      <div class="loading-subtitle">
+        PERSONAL LIFE SYSTEM
+      </div>
+
+      <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+      </div>
+
+      <div class="loading-message" id="loadingMessage">
+        Menyiapkan portal...
+      </div>
+
+      <div class="loading-caption">
+        Rapi bukan bakat, tapi kebiasaan.
+      </div>
+
+    </div>
+
+  </div>
+
+
   <script>
+
     const EXEC_URL =
       'https://script.google.com/macros/s/AKfycbw0XqLE7XCgZfAjUFpfzSsvlyOI_KO0tiD0pSVMPSB-p7faizRmY0DgNpFXmmQlTW2Ikg/exec';
 
@@ -46,9 +222,69 @@
     ];
 
     const frame = document.getElementById('portalFrame');
+    const loadingScreen = document.getElementById('loadingScreen');
+    const loadingMessage = document.getElementById('loadingMessage');
+
+    let loadingTimer = null;
+    let loadingStartedAt = 0;
+
+    // Pesan loading berdasarkan halaman
+    function getLoadingMessage(page) {
+
+      const messages = {
+        catalog: 'Menyiapkan katalog produk...',
+        product: 'Membuka detail produk...',
+        login: 'Menyiapkan halaman login...',
+        member: 'Membuka member portal...',
+        admin: 'Menyiapkan admin panel...'
+      };
+
+      return messages[page] || 'Menyiapkan portal...';
+
+    }
+
+
+    // Menampilkan loading
+    function showLoading(page) {
+
+      clearTimeout(loadingTimer);
+
+      loadingStartedAt = Date.now();
+
+      loadingMessage.textContent =
+        getLoadingMessage(page);
+
+      loadingScreen.classList.remove('hidden');
+
+      loadingTimer = setTimeout(function() {
+
+        loadingMessage.textContent =
+          'Halaman masih sedang disiapkan...';
+
+      }, 10000);
+
+    }
+
+
+    // Menyembunyikan loading setelah iframe selesai
+    function hideLoading() {
+
+      clearTimeout(loadingTimer);
+
+      // Minimal waktu tampil agar transisi tidak berkedip
+      const elapsed = Date.now() - loadingStartedAt;
+      const remaining = Math.max(0, 350 - elapsed);
+
+      setTimeout(function() {
+        loadingScreen.classList.add('hidden');
+      }, remaining);
+
+    }
+
 
     // Membaca parameter URL GitHub
     function getRouteParams() {
+
       const current = new URLSearchParams(location.search);
       const params = new URLSearchParams();
 
@@ -61,18 +297,27 @@
       params.set('page', page);
 
       if (page === 'product') {
+
         const slug = current.get('slug') || '';
 
         if (slug) {
           params.set('slug', slug.slice(0, 120));
         }
+
       }
 
       return params;
+
     }
+
 
     // Memuat halaman Apps Script
     function loadPage(params) {
+
+      const page = params.get('page') || 'catalog';
+
+      showLoading(page);
+
       const url = new URL(EXEC_URL);
 
       params.forEach(function(value, key) {
@@ -80,60 +325,82 @@
       });
 
       frame.src = url.toString();
+
     }
+
+
+    // Ketika iframe selesai dimuat
+    frame.addEventListener('load', function() {
+      hideLoading();
+    });
+
 
     // Membuka halaman berdasarkan URL awal
     loadPage(getRouteParams());
 
+
     // Navigasi browser Back dan Forward
     window.addEventListener('popstate', function() {
+
       loadPage(getRouteParams());
+
     });
+
 
     // Menerima perintah navigasi dari Apps Script
     window.addEventListener('message', function(event) {
 
       // Validasi domain pengirim
       let hostname = '';
-    
+
       try {
+
         hostname = new URL(event.origin).hostname;
+
       } catch (error) {
+
         return;
+
       }
-    
+
       if (
         hostname !== 'googleusercontent.com' &&
         !hostname.endsWith('.googleusercontent.com')
       ) {
         return;
       }
-    
+
       const data = event.data;
-    
+
       if (!data || data.type !== 'navigate') return;
-    
+
       if (!ALLOWED_PAGES.includes(data.page)) return;
-    
+
       const params = new URLSearchParams();
-    
+
       params.set('page', data.page);
-    
+
       if (data.page === 'product' && data.slug) {
-        params.set('slug', String(data.slug).slice(0, 120));
+
+        params.set(
+          'slug',
+          String(data.slug).slice(0, 120)
+        );
+
       }
-    
+
       // Perbarui URL GitHub
       history.pushState(
         null,
         '',
         location.pathname + '?' + params.toString()
       );
-    
+
       // Muat halaman baru di iframe
       loadPage(params);
-    
+
     });
+
   </script>
 
 </body>
