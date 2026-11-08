@@ -1,50 +1,142 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Planrapiku Portal v2.0</title>
+  <title>Planrapiku Portal</title>
+
   <style>
-    html, body { margin: 0; height: 100%; background: #F2EFE9; }
-    iframe { display: block; width: 100%; height: 100%; border: 0; }
-  </style>
-</head>
-<body>
-  <iframe id="app" title="Planrapiku Portal"></iframe>
-
-  <script>
-    var EXEC_URL = 'https://script.google.com/macros/s/AKfycbw0XqLE7XCgZfAjUFpfzSsvlyOI_KO0tiD0pSVMPSB-p7faizRmY0DgNpFXmmQlTW2Ikg/exec';
-    var ALLOWED = ['catalog', 'product', 'login', 'member', 'admin'];
-    var frame = document.getElementById('app');
-
-    function load(params) {
-      var u = new URL(EXEC_URL);
-      params.forEach(function (v, k) { u.searchParams.set(k, v); });
-      frame.src = u.toString();
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #F2EFE9;
     }
 
-    // Buka langsung dengan ?page=... atau ?page=product&slug=...
-    load(new URLSearchParams(location.search));
+    iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+</head>
 
-    // Tombol back/forward browser
-    window.addEventListener('popstate', function () {
-      load(new URLSearchParams(location.search));
+<body>
+
+  <iframe
+    id="portalFrame"
+    title="Planrapiku Portal"
+    allow="clipboard-read; clipboard-write">
+  </iframe>
+
+  <script>
+    const EXEC_URL =
+      'https://script.google.com/macros/s/AKfycbw0XqLE7XCgZfAjUFpfzSsvlyOI_KO0tiD0pSVMPSB-p7faizRmY0DgNpFXmmQlTW2Ikg/exec';
+
+    const ALLOWED_PAGES = [
+      'catalog',
+      'product',
+      'login',
+      'member',
+      'admin'
+    ];
+
+    const frame = document.getElementById('portalFrame');
+
+    // Membaca parameter URL GitHub
+    function getRouteParams() {
+      const current = new URLSearchParams(location.search);
+      const params = new URLSearchParams();
+
+      let page = current.get('page') || 'catalog';
+
+      if (!ALLOWED_PAGES.includes(page)) {
+        page = 'catalog';
+      }
+
+      params.set('page', page);
+
+      if (page === 'product') {
+        const slug = current.get('slug') || '';
+
+        if (slug) {
+          params.set('slug', slug.slice(0, 120));
+        }
+      }
+
+      return params;
+    }
+
+    // Memuat halaman Apps Script
+    function loadPage(params) {
+      const url = new URL(EXEC_URL);
+
+      params.forEach(function(value, key) {
+        url.searchParams.set(key, value);
+      });
+
+      frame.src = url.toString();
+    }
+
+    // Membuka halaman berdasarkan URL awal
+    loadPage(getRouteParams());
+
+    // Navigasi browser Back dan Forward
+    window.addEventListener('popstate', function() {
+      loadPage(getRouteParams());
     });
 
-    // Pesan navigasi dari Index.html
-    window.addEventListener('message', function (e) {
-      var host = '';
-      try { host = new URL(e.origin).hostname; } catch (err) { return; }
-      if (!/\.googleusercontent\.com$/.test(host)) return;
-      if (!e.data || e.data.type !== 'navigate') return;
+    // Menerima perintah navigasi dari Apps Script
+    window.addEventListener('message', function(event) {
 
-      var p = new URLSearchParams();
-      if (ALLOWED.indexOf(e.data.page) !== -1) p.set('page', e.data.page);
-      if (e.data.slug) p.set('slug', String(e.data.slug).slice(0, 120));
+      // Pastikan pesan berasal dari iframe aplikasi
+      if (event.source !== frame.contentWindow) return;
 
-      history.pushState(null, '', '?' + p.toString());
-      load(p);
+      // Validasi origin Google Apps Script
+      let hostname = '';
+
+      try {
+        hostname = new URL(event.origin).hostname;
+      } catch (error) {
+        return;
+      }
+
+      if (
+        hostname !== 'googleusercontent.com' &&
+        !hostname.endsWith('.googleusercontent.com')
+      ) {
+        return;
+      }
+
+      const data = event.data;
+
+      if (!data || data.type !== 'navigate') return;
+
+      if (!ALLOWED_PAGES.includes(data.page)) return;
+
+      const params = new URLSearchParams();
+
+      params.set('page', data.page);
+
+      if (data.page === 'product' && data.slug) {
+        params.set('slug', String(data.slug).slice(0, 120));
+      }
+
+      // Memperbarui URL GitHub
+      history.pushState(
+        null,
+        '',
+        location.pathname + '?' + params.toString()
+      );
+
+      // Memuat ulang iframe dengan route baru
+      loadPage(params);
     });
   </script>
+
 </body>
 </html>
