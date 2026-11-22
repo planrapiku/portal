@@ -424,6 +424,38 @@
 
     });
 
+    
+    // =====================================
+    // PLANRAPIKU PWA - SERVICE WORKER
+    // =====================================
+
+    if ("serviceWorker" in navigator) {
+
+      window.addEventListener("load", async function() {
+
+        try {
+
+          const registration =
+            await navigator.serviceWorker.register("./sw.js");
+
+          console.log(
+            "Planrapiku Service Worker aktif:",
+            registration.scope
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Planrapiku Service Worker gagal:",
+            error
+          );
+
+        }
+
+      });
+
+    }
+
   </script>
 
 </body>
