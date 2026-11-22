@@ -464,7 +464,7 @@
 
       params.set('page', page);
 
-      if (page === 'product') {
+      if (page === 'product' || page === 'app') {
 
         const slug = current.get('slug') || '';
 
@@ -491,6 +491,13 @@
         if (!activeAppUrl) {
           const fallback = new URLSearchParams();
           fallback.set('page', 'catalog');
+
+          history.replaceState(
+            null,
+            '',
+            location.pathname + '?page=catalog'
+          );
+
           loadPage(fallback);
           return;
         }
@@ -583,6 +590,80 @@
     
 
     
+    // Menerima perintah navigasi dari Apps Script
+    window.addEventListener('message', function(event) {
+
+      // Validasi domain pengirim
+      let hostname = '';
+
+      try {
+        hostname = new URL(event.origin).hostname;
+      } catch (error) {
+        return;
+      }
+
+      if (
+        hostname !== 'googleusercontent.com' &&
+        !hostname.endsWith('.googleusercontent.com')
+      ) {
+        return;
+      }
+
+      const data = event.data;
+
+      if (!data || data.type !== 'navigate') return;
+      if (!ALLOWED_PAGES.includes(data.page)) return;
+
+      const params = new URLSearchParams();
+      params.set('page', data.page);
+
+      if (
+        (data.page === 'product' || data.page === 'app') &&
+        data.slug
+      ) {
+        params.set('slug', String(data.slug).slice(0, 120));
+      }
+
+      // Jika membuka aplikasi produk
+      if (data.page === 'app') {
+
+        if (!data.appUrl) return;
+
+        let appUrl;
+
+        try {
+          appUrl = new URL(data.appUrl);
+        } catch (error) {
+          return;
+        }
+
+        // Batasi aplikasi ke domain HTTPS Planrapiku di AI Studio
+        if (
+          appUrl.protocol !== 'https:' ||
+          !/^planrapiku-[a-z0-9-]+\\.ai\\.studio$/.test(appUrl.hostname)
+        ) {
+          return;
+        }
+
+        activeAppUrl = appUrl.href;
+
+      } else {
+        activeAppUrl = '';
+      }
+
+      // Perbarui alamat navigasi Portal
+      history.pushState(
+        null,
+        '',
+        location.pathname + '?' + params.toString()
+      );
+
+      // Tampilkan halaman yang diminta
+      loadPage(params);
+
+    });
+
+
     // =====================================
     // PLANRAPIKU PWA - SERVICE WORKER
     // =====================================
