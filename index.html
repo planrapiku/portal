@@ -243,6 +243,55 @@
         font-size: 13px;
       }
     }
+    
+    /* PRODUCT VIEWER */
+    
+    #productView {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: #F2EFE9;
+    }
+    
+    #productView.active {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #productHeader {
+      height: 54px;
+      min-height: 54px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #2E2B28;
+      color: #F2EFE9;
+    }
+    
+    #backToPortal {
+      border: 0;
+      background: transparent;
+      color: #D4A853;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    
+    #productTitle {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    #productFrame {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      background: #F2EFE9;
+    }
+
 
   </style>
 </head>
@@ -255,6 +304,30 @@
     title="Planrapiku Portal"
     allow="clipboard-read; clipboard-write">
   </iframe>
+  
+  <!-- PRODUCT VIEWER -->
+  <div id="productView">
+  
+    <div id="productHeader">
+  
+      <button id="backToPortal" type="button">
+        ← Kembali
+      </button>
+  
+      <div id="productTitle">
+        Life Audit
+      </div>
+  
+    </div>
+  
+    <iframe
+      id="productFrame"
+      title="Planrapiku Product"
+      allow="clipboard-read; clipboard-write">
+    </iframe>
+  
+  </div>
+
 
 
   <!-- LOADING SCREEN -->
