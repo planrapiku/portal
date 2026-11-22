@@ -385,6 +385,13 @@
     const loadingScreen = document.getElementById('loadingScreen');
     const loadingMessage = document.getElementById('loadingMessage');
 
+    const productView = document.getElementById('productView');
+    const productFrame = document.getElementById('productFrame');
+    const productTitle = document.getElementById('productTitle');
+    const backToPortal = document.getElementById('backToPortal');
+    
+    let activeAppUrl = '';
+
     let loadingTimer = null;
     let loadingStartedAt = 0;
 
@@ -396,7 +403,8 @@
         product: 'Membuka detail produk...',
         login: 'Menyiapkan halaman login...',
         member: 'Membuka member portal...',
-        admin: 'Menyiapkan admin panel...'
+        admin: 'Menyiapkan admin panel...',
+        app: 'Membuka aplikasi produk...'
       };
 
       return messages[page] || 'Menyiapkan portal...';
@@ -471,27 +479,74 @@
     }
 
 
-    // Memuat halaman Apps Script
+    // Memuat halaman Portal atau aplikasi produk
     function loadPage(params) {
-
+    
       const page = params.get('page') || 'catalog';
-
+    
+      // Jika halaman yang diminta adalah aplikasi produk
+      if (page === 'app') {
+    
+        // Jangan tampilkan halaman app jika URL belum tersedia
+        if (!activeAppUrl) {
+          const fallback = new URLSearchParams();
+          fallback.set('page', 'catalog');
+          loadPage(fallback);
+          return;
+        }
+    
+        showLoading('app');
+    
+        // Sembunyikan Portal, tampilkan Product Viewer
+        frame.style.display = 'none';
+        productView.classList.add('active');
+    
+        // Judul aplikasi berdasarkan slug
+        const slug = params.get('slug') || 'Planrapiku';
+        productTitle.textContent = slug
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    
+        // Muat aplikasi produk
+        if (productFrame.src !== activeAppUrl) {
+          productFrame.src = activeAppUrl;
+        } else {
+          hideLoading();
+        }
+    
+        return;
+      }
+    
+      // Untuk halaman Portal biasa
+      productView.classList.remove('active');
+      productFrame.src = 'about:blank';
+      frame.style.display = 'block';
+    
       showLoading(page);
-
+    
       const url = new URL(EXEC_URL);
-
+    
       params.forEach(function(value, key) {
         url.searchParams.set(key, value);
       });
-
+    
       frame.src = url.toString();
-
     }
 
 
-    // Ketika iframe selesai dimuat
+    // Ketika iframe Portal selesai dimuat
     frame.addEventListener('load', function() {
-      hideLoading();
+      if (frame.style.display !== 'none') {
+        hideLoading();
+      }
+    });
+    
+    // Ketika iframe aplikasi produk selesai dimuat
+    productFrame.addEventListener('load', function() {
+      if (productView.classList.contains('active')) {
+        hideLoading();
+      }
     });
 
 
@@ -506,59 +561,99 @@
 
     });
 
-
+    // Tombol kembali dari aplikasi produk ke Portal
+    backToPortal.addEventListener('click', function() {
+    
+      activeAppUrl = '';
+    
+      const params = new URLSearchParams();
+      params.set('page', 'catalog');
+    
+      history.pushState(
+        null,
+        '',
+        location.pathname + '?page=catalog'
+      );
+    
+      loadPage(params);
+    
+    });
+    
+        
     // Menerima perintah navigasi dari Apps Script
     window.addEventListener('message', function(event) {
-
+    
+      // Pastikan pesan berasal dari iframe Portal
+      if (event.source !== frame.contentWindow) return;
+    
       // Validasi domain pengirim
       let hostname = '';
-
+    
       try {
-
         hostname = new URL(event.origin).hostname;
-
       } catch (error) {
-
         return;
-
       }
-
+    
       if (
         hostname !== 'googleusercontent.com' &&
         !hostname.endsWith('.googleusercontent.com')
       ) {
         return;
       }
-
+    
       const data = event.data;
-
+    
       if (!data || data.type !== 'navigate') return;
-
       if (!ALLOWED_PAGES.includes(data.page)) return;
-
+    
       const params = new URLSearchParams();
-
       params.set('page', data.page);
-
+    
       if (data.page === 'product' && data.slug) {
-
-        params.set(
-          'slug',
-          String(data.slug).slice(0, 120)
-        );
-
+        params.set('slug', String(data.slug).slice(0, 120));
       }
-
+    
+      // Navigasi ke aplikasi produk
+      if (data.page === 'app') {
+    
+        if (!data.appUrl) return;
+    
+        let appUrl;
+    
+        try {
+          appUrl = new URL(data.appUrl);
+        } catch (error) {
+          return;
+        }
+    
+        // Hanya izinkan HTTPS dan domain aplikasi Planrapiku
+        if (
+          appUrl.protocol !== 'https:' ||
+          !/^planrapiku-[a-z0-9-]+\.ai\.studio$/.test(appUrl.hostname)
+        ) {
+          return;
+        }
+    
+        activeAppUrl = appUrl.href;
+    
+        if (data.slug) {
+          params.set('slug', String(data.slug).slice(0, 120));
+        }
+      } else {
+        activeAppUrl = '';
+      }
+    
       // Perbarui URL GitHub
       history.pushState(
         null,
         '',
         location.pathname + '?' + params.toString()
       );
-
-      // Muat halaman baru di iframe
+    
+      // Muat halaman yang diminta
       loadPage(params);
-
+    
     });
 
     
