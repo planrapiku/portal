@@ -186,6 +186,64 @@
         transition-duration: .01ms !important;
       }
     }
+
+    
+    /* =================================
+       PLANRAPIKU INSTALL BUTTON
+    ================================= */
+
+    #installAppButton {
+      position: fixed;
+      right: 20px;
+      bottom: 24px;
+      z-index: 10001;
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+
+      padding: 14px 20px;
+      border: 1px solid #D4A853;
+      border-radius: 14px;
+
+      background: #2E2B28;
+      color: #F2EFE9;
+
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+
+      box-shadow: 0 5px 20px rgba(0,0,0,.2);
+      cursor: pointer;
+
+      transition:
+        transform .2s ease,
+        background .2s ease;
+    }
+
+    #installAppButton.visible {
+      display: flex;
+    }
+
+    #installAppButton:active {
+      transform: scale(.96);
+    }
+
+    #installAppButton .install-icon {
+      color: #D4A853;
+      font-size: 19px;
+    }
+
+    @media (max-width: 480px) {
+      #installAppButton {
+        right: 16px;
+        bottom: 20px;
+        padding: 13px 17px;
+        font-size: 13px;
+      }
+    }
+
   </style>
 </head>
 
@@ -230,6 +288,11 @@
 
   </div>
 
+  <!-- PWA INSTALL BUTTON -->
+  <button id="installAppButton" type="button">
+    <span class="install-icon">↓</span>
+    <span>Install Planrapiku</span>
+  </button>
 
   <script>
 
@@ -455,6 +518,104 @@
       });
 
     }
+
+    
+    // =====================================
+    // PLANRAPIKU - INSTALL APP
+    // =====================================
+
+    let deferredInstallPrompt = null;
+
+    const installButton =
+      document.getElementById("installAppButton");
+
+
+    // Periksa apakah aplikasi sudah terinstal
+    function isAppInstalled() {
+
+      return (
+        window.matchMedia(
+          "(display-mode: standalone)"
+        ).matches ||
+        window.navigator.standalone === true
+      );
+
+    }
+
+
+    // Jika sudah terinstal, sembunyikan tombol
+    if (isAppInstalled()) {
+
+      installButton.classList.remove("visible");
+
+    }
+
+
+    // Menangkap kesempatan instalasi dari Chrome
+    window.addEventListener(
+      "beforeinstallprompt",
+      function(event) {
+
+        // Gunakan tombol instalasi buatan sendiri
+        event.preventDefault();
+
+        deferredInstallPrompt = event;
+
+        // Tampilkan tombol
+        if (!isAppInstalled()) {
+
+          installButton.classList.add("visible");
+
+        }
+
+      }
+    );
+
+
+    // Ketika tombol diklik
+    installButton.addEventListener(
+      "click",
+      async function() {
+
+        if (!deferredInstallPrompt) return;
+
+        // Tampilkan dialog instalasi Chrome
+        deferredInstallPrompt.prompt();
+
+        const choice =
+          await deferredInstallPrompt.userChoice;
+
+        console.log(
+          "Pilihan instalasi:",
+          choice.outcome
+        );
+
+        // Kesempatan prompt hanya bisa digunakan sekali
+        deferredInstallPrompt = null;
+
+        // Sembunyikan tombol setelah dipilih
+        installButton.classList.remove("visible");
+
+      }
+    );
+
+
+    // Ketika aplikasi berhasil diinstal
+    window.addEventListener(
+      "appinstalled",
+      function() {
+
+        installButton.classList.remove("visible");
+
+        deferredInstallPrompt = null;
+
+        console.log(
+          "Planrapiku berhasil diinstal!"
+        );
+
+      }
+    );
+
 
   </script>
 
