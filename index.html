@@ -592,26 +592,24 @@
     
     // Menerima perintah navigasi dari Apps Script
     window.addEventListener('message', function(event) {
-
-      // Validasi domain pengirim
-      let hostname = '';
-
-      try {
-        hostname = new URL(event.origin).hostname;
-      } catch (error) {
-        return;
-      }
-
-      if (
-        hostname !== 'googleusercontent.com' &&
-        !hostname.endsWith('.googleusercontent.com')
-      ) {
-        return;
-      }
-
       const data = event.data;
-
       if (!data || data.type !== 'navigate') return;
+
+      // Validasi asal origin (mengizinkan domain Google Apps Script / usercontent)
+      let isAllowedOrigin = false;
+      try {
+        const originUrl = new URL(event.origin || '');
+        const host = originUrl.hostname.toLowerCase();
+        isAllowedOrigin =
+          host === 'googleusercontent.com' ||
+          host.endsWith('.googleusercontent.com') ||
+          host === 'script.google.com' ||
+          host.endsWith('.script.google.com');
+      } catch (error) {
+        isAllowedOrigin = false;
+      }
+
+      if (!isAllowedOrigin) return;
       if (!ALLOWED_PAGES.includes(data.page)) return;
 
       const params = new URLSearchParams();
@@ -624,43 +622,39 @@
         params.set('slug', String(data.slug).slice(0, 120));
       }
 
-      // Jika membuka aplikasi produk
       if (data.page === 'app') {
-
         if (!data.appUrl) return;
 
-        let appUrl;
-
+        let parsedAppUrl;
         try {
-          appUrl = new URL(data.appUrl);
+          parsedAppUrl = new URL(String(data.appUrl).trim());
         } catch (error) {
           return;
         }
 
-        // Batasi aplikasi ke domain HTTPS Planrapiku di AI Studio
         if (
-          appUrl.protocol !== 'https:' ||
-          !/^planrapiku-[a-z0-9-]+\\.ai\\.studio$/.test(appUrl.hostname)
+          parsedAppUrl.protocol !== 'https:' ||
+          !/^planrapiku-[a-z0-9-]+\.ai\.studio$/i.test(parsedAppUrl.hostname)
         ) {
           return;
         }
 
-        activeAppUrl = appUrl.href;
-
+        activeAppUrl = parsedAppUrl.href;
       } else {
         activeAppUrl = '';
       }
 
-      // Perbarui alamat navigasi Portal
-      history.pushState(
-        null,
-        '',
-        location.pathname + '?' + params.toString()
-      );
+      try {
+        history.pushState(
+          null,
+          '',
+          location.pathname + '?' + params.toString()
+        );
+      } catch (error) {
+        // Abaikan jika pushState dibatasi konteks tertentu
+      }
 
-      // Tampilkan halaman yang diminta
       loadPage(params);
-
     });
 
 
