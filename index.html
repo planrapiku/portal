@@ -514,6 +514,36 @@
     let loadingTimer = null;
     let loadingStartedAt = 0;
 
+    function readPersistentStorage(key) {
+      try {
+        const localVal = localStorage.getItem(key);
+        if (localVal !== null && localVal !== '') return localVal;
+      } catch (error) {}
+      try {
+        const sessionVal = sessionStorage.getItem(key);
+        if (sessionVal !== null && sessionVal !== '') return sessionVal;
+      } catch (error) {}
+      return '';
+    }
+
+    function writePersistentStorage(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (error) {}
+      try {
+        sessionStorage.setItem(key, value);
+      } catch (error) {}
+    }
+
+    function removePersistentStorage(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {}
+      try {
+        sessionStorage.removeItem(key);
+      } catch (error) {}
+    }
+
     function isValidPlanrapikuAppUrl(rawUrl) {
       if (!rawUrl) return '';
       try {
@@ -533,24 +563,25 @@
     function saveActiveApp(slug, href) {
       const validHref = isValidPlanrapikuAppUrl(href);
       if (!validHref) return;
-      try {
-        sessionStorage.setItem(
-          ACTIVE_APP_STORAGE_KEY,
-          JSON.stringify({
-            slug: String(slug || '').trim(),
-            url: validHref
-          })
-        );
-      } catch (error) {}
+      writePersistentStorage(
+        ACTIVE_APP_STORAGE_KEY,
+        JSON.stringify({
+          slug: String(slug || '').trim().toLowerCase(),
+          url: validHref,
+          savedAt: new Date().toISOString()
+        })
+      );
     }
 
     function readActiveApp(expectedSlug) {
       try {
-        const raw = sessionStorage.getItem(ACTIVE_APP_STORAGE_KEY);
+        const raw = readPersistentStorage(ACTIVE_APP_STORAGE_KEY);
         if (!raw) return '';
         const parsed = JSON.parse(raw);
         if (!parsed || !parsed.url) return '';
-        if (expectedSlug && parsed.slug && parsed.slug !== expectedSlug) {
+        const normalizedExpected = String(expectedSlug || '').trim().toLowerCase();
+        const normalizedSavedSlug = String(parsed.slug || '').trim().toLowerCase();
+        if (normalizedExpected && normalizedSavedSlug && normalizedSavedSlug !== normalizedExpected) {
           return '';
         }
         return isValidPlanrapikuAppUrl(parsed.url);
@@ -561,9 +592,7 @@
 
     function clearActiveApp() {
       activeAppUrl = '';
-      try {
-        sessionStorage.removeItem(ACTIVE_APP_STORAGE_KEY);
-      } catch (error) {}
+      removePersistentStorage(ACTIVE_APP_STORAGE_KEY);
     }
 
     function formatSlugLabel(slug) {
