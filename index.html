@@ -27,7 +27,9 @@
         href="./icons/icon-192.png">
 
   <style>
-    * {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
     }
 
@@ -51,6 +53,102 @@
       height: 100%;
       border: 0;
       background: #F2EFE9;
+    }
+
+    /* WRAPPER PRODUCT FALLBACK */
+    #wrapperProductFallback {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      overflow-y: auto;
+      background: #F2EFE9;
+      color: #2E2B28;
+    }
+
+    #wrapperProductFallback.active {
+      display: block;
+    }
+
+    .wpf-topbar {
+      height: 54px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #2E2B28;
+      color: #F2EFE9;
+    }
+
+    .wpf-back {
+      border: 0;
+      background: transparent;
+      color: #D4A853;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .wpf-body {
+      max-width: 720px;
+      margin: 36px auto;
+      padding: 0 16px;
+    }
+
+    .wpf-card {
+      padding: 32px 24px;
+      border-radius: 16px;
+      background: #FCFBF9;
+      border: 1px solid rgba(46, 43, 40, .12);
+    }
+
+    .wpf-badge {
+      margin: 0 0 10px;
+      color: #9A7837;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .wpf-title {
+      margin: 0 0 12px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .wpf-desc {
+      margin: 0 0 24px;
+      color: #6F6A63;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .wpf-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .wpf-btn-gold,
+    .wpf-btn-dark {
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: 10px;
+      border: 0;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .wpf-btn-gold {
+      background: #9A7837;
+      color: #FCFBF9;
+    }
+
+    .wpf-btn-dark {
+      background: #2E2B28;
+      color: #F2EFE9;
     }
 
     /* LOADING SCREEN */
@@ -299,6 +397,27 @@
     allow="clipboard-read; clipboard-write">
   </iframe>
 
+  <!-- WRAPPER PRODUCT FALLBACK -->
+  <div id="wrapperProductFallback">
+    <div class="wpf-topbar">
+      <button id="wpfBackBtn" class="wpf-back" type="button">← Katalog</button>
+      <div id="wpfHeaderTitle" style="font-size:13px;font-weight:600;">Modul Planrapiku</div>
+    </div>
+    <div class="wpf-body">
+      <div class="wpf-card">
+        <p class="wpf-badge">PLANRAPIKU MODUL</p>
+        <h1 id="wpfTitle" class="wpf-title">Daily Execution</h1>
+        <p id="wpfDesc" class="wpf-desc">
+          Halaman detail modul sedang disiapkan atau dibuka melalui portal Planrapiku.
+        </p>
+        <div class="wpf-actions">
+          <button id="wpfLoginBtn" class="wpf-btn-gold" type="button">Login / Cek Akses</button>
+          <button id="wpfCatalogBtn" class="wpf-btn-dark" type="button">Kembali ke Katalog</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- PRODUCT VIEWER -->
   <div id="productView">
 
@@ -378,6 +497,14 @@
     const loadingScreen = document.getElementById('loadingScreen');
     const loadingMessage = document.getElementById('loadingMessage');
 
+    const wpfEl = document.getElementById('wrapperProductFallback');
+    const wpfBackBtn = document.getElementById('wpfBackBtn');
+    const wpfHeaderTitle = document.getElementById('wpfHeaderTitle');
+    const wpfTitle = document.getElementById('wpfTitle');
+    const wpfDesc = document.getElementById('wpfDesc');
+    const wpfLoginBtn = document.getElementById('wpfLoginBtn');
+    const wpfCatalogBtn = document.getElementById('wpfCatalogBtn');
+
     const productView = document.getElementById('productView');
     const productFrame = document.getElementById('productFrame');
     const productTitle = document.getElementById('productTitle');
@@ -438,6 +565,56 @@
         sessionStorage.removeItem(ACTIVE_APP_STORAGE_KEY);
       } catch (error) {}
     }
+
+    function formatSlugLabel(slug) {
+      if (!slug) return 'Modul Planrapiku';
+      return String(slug)
+        .split('-')
+        .filter(Boolean)
+        .map(function(word) {
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(' ');
+    }
+
+    function hideWrapperProductFallback() {
+      wpfEl.classList.remove('active');
+    }
+
+    function showWrapperProductFallback(slug) {
+      const label = formatSlugLabel(slug);
+      wpfHeaderTitle.textContent = label;
+      wpfTitle.textContent = label;
+      wpfDesc.textContent =
+        'Halaman detail untuk modul "' +
+        label +
+        '" siap dibuka melalui portal Planrapiku.';
+      wpfEl.classList.add('active');
+    }
+
+    function navigateWrapperToPage(targetPage) {
+      hideWrapperProductFallback();
+      const params = new URLSearchParams();
+      params.set('page', targetPage);
+      try {
+        history.pushState(
+          null,
+          '',
+          location.pathname + '?page=' + encodeURIComponent(targetPage)
+        );
+      } catch (error) {}
+      loadPage(params);
+    }
+
+    wpfBackBtn.addEventListener('click', function() {
+      navigateWrapperToPage('catalog');
+    });
+    wpfCatalogBtn.addEventListener('click', function() {
+      navigateWrapperToPage('catalog');
+    });
+    wpfLoginBtn.addEventListener('click', function() {
+      navigateWrapperToPage('login');
+    });
 
     // Pesan loading berdasarkan halaman
     function getLoadingMessage(page) {
@@ -504,6 +681,7 @@
     // Memuat halaman Portal atau aplikasi produk
     function loadPage(params) {
       const page = params.get('page') || 'catalog';
+      hideWrapperProductFallback();
 
       // Jika halaman yang diminta adalah aplikasi produk
       if (page === 'app') {
@@ -536,10 +714,7 @@
         productView.classList.add('active');
 
         const titleSlug = slugParam || 'Planrapiku';
-        productTitle.textContent = titleSlug
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+        productTitle.textContent = formatSlugLabel(titleSlug);
 
         if (productFrame.src !== activeAppUrl) {
           productFrame.src = activeAppUrl;
@@ -591,19 +766,7 @@
     // Tombol kembali dari aplikasi produk ke Portal
     backToPortal.addEventListener('click', function() {
       clearActiveApp();
-
-      const params = new URLSearchParams();
-      params.set('page', 'catalog');
-
-      try {
-        history.pushState(
-          null,
-          '',
-          location.pathname + '?page=catalog'
-        );
-      } catch (error) {}
-
-      loadPage(params);
+      navigateWrapperToPage('catalog');
     });
 
     // Menerima perintah navigasi dari Apps Script
